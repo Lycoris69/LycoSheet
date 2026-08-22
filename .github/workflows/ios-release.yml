@@ -40,7 +40,9 @@ jobs:
           zip -r "LycoSheet-${TAG}.xcframework.zip" Shared.xcframework
           echo "ASSET=shared/build/XCFrameworks/release/LycoSheet-${TAG}.xcframework.zip" >> $GITHUB_ENV
 
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.ASSET }}
+      - name: Upload to existing release
+        # gh release upload only works with an already-existing release —
+        # it will never create a new one. The APK release must exist first.
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "${{ env.ASSET }}" --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
