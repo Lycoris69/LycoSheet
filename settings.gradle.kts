@@ -13,5 +13,7 @@ dependencyResolutionManagement {
     }
 }
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 rootProject.name = "LycoSheet"
 include(":shared", ":androidApp")

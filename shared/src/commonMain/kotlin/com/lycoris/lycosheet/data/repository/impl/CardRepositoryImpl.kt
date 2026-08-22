@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 
 class CardRepositoryImpl(private val db: LycoSheetDatabase) : CardRepository {
 
-    private val queries = db.cardEntityQueries
+    private val queries = db.cardQueries
 
     override fun getCardsForDeck(deckId: Long): Flow<List<Card>> =
         queries.selectByDeckId(deckId)
