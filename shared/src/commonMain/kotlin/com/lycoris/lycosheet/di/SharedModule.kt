@@ -17,7 +17,6 @@ import com.lycoris.lycosheet.presentation.home.HomeViewModel
 import com.lycoris.lycosheet.presentation.library.LibraryViewModel
 import com.lycoris.lycosheet.presentation.settings.SettingsViewModel
 import com.lycoris.lycosheet.presentation.study.StudyViewModel
-import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val sharedModule = module {
@@ -40,9 +39,10 @@ val sharedModule = module {
     factory { UpdateCardUseCase(get()) }
     factory { DeleteCardUseCase(get()) }
 
-    // ViewModels
-    viewModel { HomeViewModel(get(), get(), get()) }
-    viewModel { LibraryViewModel(get(), get(), get()) }
-    viewModel { StudyViewModel(get()) }
-    viewModel { SettingsViewModel() }
+    // ViewModels — registered as factory so this compiles on iOS too.
+    // On Android, koinViewModel() handles the ViewModel lifecycle scope.
+    factory { HomeViewModel(get(), get(), get()) }
+    factory { LibraryViewModel(get(), get(), get()) }
+    factory { StudyViewModel(get()) }
+    factory { SettingsViewModel() }
 }
