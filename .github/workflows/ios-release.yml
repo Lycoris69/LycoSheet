@@ -29,7 +29,9 @@ jobs:
       - name: Assemble XCFramework
         # The KMP XCFramework DSL merges iosSimulatorArm64 + iosX64 into a
         # fat simulator slice automatically, then calls xcodebuild for us.
-        run: ./gradlew :shared:assembleSharedReleaseXCFramework --no-daemon
+        # --max-workers=1 prevents the three link tasks from running in parallel
+        # and exhausting the Kotlin/Native compiler daemon heap.
+        run: ./gradlew :shared:assembleSharedReleaseXCFramework --no-daemon --max-workers=1
 
       - name: Zip and rename
         run: |
