@@ -8,6 +8,13 @@ CREATE TABLE DeckEntity (
 selectAll:
 SELECT * FROM DeckEntity ORDER BY created_at DESC;
 
+selectAllWithCardCount:
+SELECT DeckEntity.*, COUNT(CardEntity.id) AS card_count
+FROM DeckEntity
+LEFT JOIN CardEntity ON CardEntity.deck_id = DeckEntity.id
+GROUP BY DeckEntity.id
+ORDER BY DeckEntity.created_at DESC;
+
 selectById:
 SELECT * FROM DeckEntity WHERE id = ?;
 

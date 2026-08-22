@@ -8,7 +8,6 @@ import com.lycoris.lycosheet.domain.usecase.deck.GetAllDecksUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -23,15 +22,10 @@ class LibraryViewModel(
 
     init {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            // getAllDecks() now returns decks with their live card counts via
+            // a LEFT JOIN query — no inner collect needed.
             getAllDecks().collect { decks ->
-                // Enrich each deck with its real card count
-                val enriched = decks.map { deck ->
-                    var count = 0
-                    getCardsForDeck(deck.id).collect { cards -> count = cards.size }
-                    deck.copy(cardCount = count)
-                }
-                _state.update { it.copy(decks = enriched, isLoading = false) }
+                _state.update { it.copy(decks = decks, isLoading = false) }
             }
         }
     }

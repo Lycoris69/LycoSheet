@@ -16,10 +16,10 @@ class DeckRepositoryImpl(private val db: LycoSheetDatabase) : DeckRepository {
     private val queries = db.deckQueries
 
     override fun getAllDecks(): Flow<List<Deck>> =
-        queries.selectAll()
+        queries.selectAllWithCardCount()
             .asFlow()
             .mapToList(Dispatchers.Default)
-            .map { list -> list.map { it.toDeck() } }
+            .map { list -> list.map { it.toDeckWithCount() } }
 
     override suspend fun getDeckById(id: Long): Deck? =
         withContext(Dispatchers.Default) {
@@ -46,6 +46,14 @@ class DeckRepositoryImpl(private val db: LycoSheetDatabase) : DeckRepository {
         id = id,
         name = name,
         description = description,
+        createdAt = created_at
+    )
+
+    private fun com.lycoris.lycosheet.db.SelectAllWithCardCount.toDeckWithCount() = Deck(
+        id = id,
+        name = name,
+        description = description,
+        cardCount = card_count.toInt(),
         createdAt = created_at
     )
 }
