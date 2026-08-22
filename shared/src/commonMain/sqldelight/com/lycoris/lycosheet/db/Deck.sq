@@ -1,0 +1,25 @@
+CREATE TABLE DeckEntity (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL DEFAULT 0
+);
+
+selectAll:
+SELECT * FROM DeckEntity ORDER BY created_at DESC;
+
+selectById:
+SELECT * FROM DeckEntity WHERE id = ?;
+
+insert:
+INSERT INTO DeckEntity(name, description, created_at)
+VALUES (?, ?, ?);
+
+update:
+UPDATE DeckEntity SET name = ?, description = ? WHERE id = ?;
+
+deleteById:
+DELETE FROM DeckEntity WHERE id = ?;
+
+lastInsertRowId:
+SELECT last_insert_rowid();
