@@ -1,0 +1,30 @@
+CREATE TABLE CardEntity (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    deck_id INTEGER NOT NULL,
+    front TEXT NOT NULL,
+    back TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(deck_id) REFERENCES DeckEntity(id) ON DELETE CASCADE
+);
+
+selectByDeckId:
+SELECT * FROM CardEntity WHERE deck_id = ? ORDER BY created_at ASC;
+
+selectById:
+SELECT * FROM CardEntity WHERE id = ?;
+
+insert:
+INSERT INTO CardEntity(deck_id, front, back, created_at)
+VALUES (?, ?, ?, ?);
+
+update:
+UPDATE CardEntity SET front = ?, back = ? WHERE id = ?;
+
+deleteById:
+DELETE FROM CardEntity WHERE id = ?;
+
+countByDeckId:
+SELECT COUNT(*) FROM CardEntity WHERE deck_id = ?;
+
+lastInsertRowId:
+SELECT last_insert_rowid();
