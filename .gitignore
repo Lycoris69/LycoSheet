@@ -24,3 +24,6 @@ iosApp/.build/
 *.xcworkspace
 !default.xcworkspace
 DerivedData/
+
+# Local Claude Code instructions — not tracked
+CLAUDE.md
