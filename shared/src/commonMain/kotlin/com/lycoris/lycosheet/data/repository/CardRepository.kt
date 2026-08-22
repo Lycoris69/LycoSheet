@@ -10,4 +10,5 @@ interface CardRepository {
     suspend fun updateCard(card: Card)
     suspend fun deleteCard(id: Long)
     suspend fun getCardCountForDeck(deckId: Long): Long
+    suspend fun incrementSeenCount(cardId: Long)
 }

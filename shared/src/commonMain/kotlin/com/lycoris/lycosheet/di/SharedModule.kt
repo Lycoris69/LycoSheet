@@ -8,6 +8,7 @@ import com.lycoris.lycosheet.db.LycoSheetDatabase
 import com.lycoris.lycosheet.domain.usecase.card.CreateCardUseCase
 import com.lycoris.lycosheet.domain.usecase.card.DeleteCardUseCase
 import com.lycoris.lycosheet.domain.usecase.card.GetCardsForDeckUseCase
+import com.lycoris.lycosheet.domain.usecase.card.IncrementCardSeenUseCase
 import com.lycoris.lycosheet.domain.usecase.card.UpdateCardUseCase
 import com.lycoris.lycosheet.domain.usecase.deck.CreateDeckUseCase
 import com.lycoris.lycosheet.domain.usecase.deck.DeleteDeckUseCase
@@ -35,6 +36,7 @@ val sharedModule = module {
 
     // Use cases – card
     factory { GetCardsForDeckUseCase(get()) }
+    factory { IncrementCardSeenUseCase(get()) }
     factory { CreateCardUseCase(get()) }
     factory { UpdateCardUseCase(get()) }
     factory { DeleteCardUseCase(get()) }
@@ -43,6 +45,6 @@ val sharedModule = module {
     // On Android, koinViewModel() handles the ViewModel lifecycle scope.
     factory { HomeViewModel(get(), get(), get()) }
     factory { LibraryViewModel(get(), get(), get()) }
-    factory { StudyViewModel(get()) }
+    factory { StudyViewModel(get(), get()) }
     factory { SettingsViewModel() }
 }

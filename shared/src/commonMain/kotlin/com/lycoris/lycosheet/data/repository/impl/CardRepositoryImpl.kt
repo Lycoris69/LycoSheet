@@ -47,11 +47,17 @@ class CardRepositoryImpl(private val db: LycoSheetDatabase) : CardRepository {
             queries.countByDeckId(deckId).executeAsOne()
         }
 
+    override suspend fun incrementSeenCount(cardId: Long) =
+        withContext(Dispatchers.Default) {
+            queries.incrementSeenCount(cardId)
+        }
+
     private fun com.lycoris.lycosheet.db.CardEntity.toCard() = Card(
         id = id,
         deckId = deck_id,
         front = front,
         back = back,
-        createdAt = created_at
+        createdAt = created_at,
+        seenCount = seen_count.toInt()
     )
 }

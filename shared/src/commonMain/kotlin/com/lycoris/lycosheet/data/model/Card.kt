@@ -5,5 +5,6 @@ data class Card(
     val deckId: Long,
     val front: String,
     val back: String,
-    val createdAt: Long = 0L
+    val createdAt: Long = 0L,
+    val seenCount: Int = 0
 )

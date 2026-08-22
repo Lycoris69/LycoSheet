@@ -4,6 +4,7 @@ CREATE TABLE CardEntity (
     front TEXT NOT NULL,
     back TEXT NOT NULL,
     created_at INTEGER NOT NULL DEFAULT 0,
+    seen_count INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(deck_id) REFERENCES DeckEntity(id) ON DELETE CASCADE
 );
 
@@ -25,6 +26,9 @@ DELETE FROM CardEntity WHERE id = ?;
 
 countByDeckId:
 SELECT COUNT(*) FROM CardEntity WHERE deck_id = ?;
+
+incrementSeenCount:
+UPDATE CardEntity SET seen_count = seen_count + 1 WHERE id = ?;
 
 lastInsertRowId:
 SELECT last_insert_rowid();
