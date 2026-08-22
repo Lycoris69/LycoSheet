@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+*.DS_Store
+
+# Android
+local.properties
+
+# SQLDelight generated
+*/build/generated/
+
+# iOS
+iosApp/Pods/
+iosApp/.build/
+*.xcworkspace
+!default.xcworkspace
+DerivedData/
