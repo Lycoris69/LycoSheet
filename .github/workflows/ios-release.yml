@@ -26,26 +26,17 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build iOS frameworks
-        run: |
-          ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon
-          ./gradlew :shared:linkReleaseFrameworkIosX64 --no-daemon
-          ./gradlew :shared:linkReleaseFrameworkIosSimulatorArm64 --no-daemon
-
       - name: Assemble XCFramework
-        run: |
-          xcodebuild -create-xcframework \
-            -framework shared/build/bin/iosArm64/releaseFramework/Shared.framework \
-            -framework shared/build/bin/iosX64/releaseFramework/Shared.framework \
-            -framework shared/build/bin/iosSimulatorArm64/releaseFramework/Shared.framework \
-            -output shared/build/Shared.xcframework
+        # The KMP XCFramework DSL merges iosSimulatorArm64 + iosX64 into a
+        # fat simulator slice automatically, then calls xcodebuild for us.
+        run: ./gradlew :shared:assembleSharedReleaseXCFramework --no-daemon
 
       - name: Zip and rename
         run: |
           TAG=${GITHUB_REF#refs/tags/}
-          cd shared/build
+          cd shared/build/XCFrameworks/release
           zip -r "LycoSheet-${TAG}.xcframework.zip" Shared.xcframework
-          echo "ASSET=shared/build/LycoSheet-${TAG}.xcframework.zip" >> $GITHUB_ENV
+          echo "ASSET=shared/build/XCFrameworks/release/LycoSheet-${TAG}.xcframework.zip" >> $GITHUB_ENV
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
