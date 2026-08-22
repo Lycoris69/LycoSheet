@@ -6,17 +6,22 @@ A Kotlin Multiplatform Mobile flashcard app for Android and iOS. Create double-s
 
 - **Create cards** — write a front (question/term) and back (answer/definition), assign to a deck or create one on the fly
 - **Library** — browse all decks with live card counts; start a study session from any deck
-- **Study session** — cards displayed one at a time, tap to flip recto↔verso, swipe or button to advance
+- **Study session** — cards displayed one at a time, tap to flip recto↔verso; after revealing the answer, grade yourself:
+  - 🔴 **Again** — didn't know it; card is re-queued at the end of the session
+  - ⬜ **Ok** — knew it somewhat
+  - 🟢 **Good** — knew it easily
+- **Seen counter** — each card shows how many times it has been studied across all sessions
+- **Session summary** — completion screen shows your Again / Ok / Good breakdown
 - **Settings** — appearance and app-level preferences
 
 ## Download
 
-Latest release: [v0.1.1](https://github.com/Lycoris69/LycoSheet/releases/tag/v0.1.1)
+Latest release: [v0.1.3](https://github.com/Lycoris69/LycoSheet/releases/tag/v0.1.3)
 
 | Platform | Asset |
 |---|---|
-| Android | `LycoSheet-v0.1.1.apk` |
-| iOS (XCFramework) | `LycoSheet-v0.1.1.xcframework.zip` |
+| Android | `LycoSheet-v0.1.3.apk` |
+| iOS (XCFramework) | `LycoSheet-v0.1.3.xcframework.zip` |
 
 Install the APK directly on any Android device (API 24+). The XCFramework is for integrating the shared Kotlin logic into an Xcode project.
 
@@ -37,25 +42,33 @@ Install the APK directly on any Android device (API 24+). The XCFramework is for
 ```
 shared/               ← KMP module (Android + iOS)
   commonMain/
-    data/model/       ← Card, Deck, StudySession
+    data/model/       ← Card, Deck, StudySession, CardGrade
     data/repository/  ← interfaces + SQLDelight-backed impls
     di/               ← Koin SharedModule, DatabaseDriverFactory (expect)
     domain/usecase/   ← deck/ and card/ use cases
     presentation/     ← home/ library/ study/ settings/ (ViewModel + State)
-    sqldelight/       ← Card.sq, Deck.sq (schema + named queries)
+    sqldelight/       ← Card.sq, Deck.sq + 1.sqm migration
   androidMain/        ← DatabaseDriverFactory.android.kt, Platform.android.kt
   iosMain/            ← DatabaseDriverFactory.ios.kt, Platform.ios.kt
 
 androidApp/           ← Android application module
   ui/home/            ← HomeScreen.kt
   ui/library/         ← LibraryScreen.kt
-  ui/study/           ← StudyScreen.kt
+  ui/study/           ← StudyScreen.kt (grading + seen counter)
   ui/settings/        ← SettingsScreen.kt
   ui/components/      ← FlashCard.kt (Y-axis flip animation)
   ui/navigation/      ← Screen.kt (sealed routes), NavGraph.kt
   ui/theme/           ← Material 3 light/dark theme
   di/                 ← AndroidModule.kt (provides DatabaseDriverFactory)
 ```
+
+## Database schema
+
+Current version: **2**
+
+| Migration | Change |
+|---|---|
+| 1 → 2 | `CardEntity.seen_count INTEGER DEFAULT 0` added |
 
 ## Build
 
@@ -74,7 +87,7 @@ androidApp/           ← Android application module
 # Output: shared/build/XCFrameworks/release/Shared.xcframework
 ```
 
-The iOS XCFramework is also built automatically via GitHub Actions on every `v*` tag push and attached to the GitHub release.
+The iOS XCFramework is built automatically via GitHub Actions on every `v*` tag push and attached to the GitHub release via `gh release upload` (never creates a new release — the APK release must exist first).
 
 ## iOS Setup
 
@@ -88,3 +101,5 @@ MVVM + Clean Architecture:
 - **Repository** — SQLDelight 2, reactive `Flow<List<T>>` via `asFlow()` + `mapToList()`
 - **DI** — Koin; ViewModels registered as `factory {}` in `sharedModule` (iOS-compatible), Android `koinViewModel()` manages lifecycle scope
 - **Card flip** — pure UI animation (`animateFloatAsState` on `rotationY`), no DB write; resets each session
+- **Grading** — `StudyViewModel.gradeCard(CardGrade)` records the grade in-memory and advances; `AGAIN` appends the card to the end of the session queue
+- **Seen counter** — `IncrementCardSeenUseCase` increments `seen_count` in the DB each time a card is displayed; the count is shown as a badge on the card
