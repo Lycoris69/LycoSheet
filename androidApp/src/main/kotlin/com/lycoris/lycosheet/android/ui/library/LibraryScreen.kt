@@ -1,5 +1,6 @@
 package com.lycoris.lycosheet.android.ui.library
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
+    onDeckClick: (deckId: Long) -> Unit,
     onStartStudy: (deckId: Long) -> Unit,
     viewModel: LibraryViewModel = koinViewModel()
 ) {
@@ -58,6 +60,7 @@ fun LibraryScreen(
                 items(state.decks, key = { it.id }) { deck ->
                     DeckCard(
                         deck = deck,
+                        onClick = { onDeckClick(deck.id) },
                         onStudy = { onStartStudy(deck.id) },
                         onDelete = { viewModel.deleteDeck(deck.id) }
                     )
@@ -70,6 +73,7 @@ fun LibraryScreen(
 @Composable
 private fun DeckCard(
     deck: Deck,
+    onClick: () -> Unit,
     onStudy: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -92,7 +96,9 @@ private fun DeckCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(

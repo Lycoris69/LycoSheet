@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lycoris.lycosheet.android.ui.home.HomeScreen
+import com.lycoris.lycosheet.android.ui.library.DeckDetailScreen
 import com.lycoris.lycosheet.android.ui.library.LibraryScreen
 import com.lycoris.lycosheet.android.ui.settings.SettingsScreen
 import com.lycoris.lycosheet.android.ui.study.StudyScreen
@@ -76,9 +77,25 @@ fun LycoSheetNavGraph() {
         ) {
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Library.route) {
-                LibraryScreen(onStartStudy = { deckId ->
-                    navController.navigate(Screen.Study.createRoute(deckId))
-                })
+                LibraryScreen(
+                    onDeckClick = { deckId ->
+                        navController.navigate(Screen.DeckDetail.createRoute(deckId))
+                    },
+                    onStartStudy = { deckId ->
+                        navController.navigate(Screen.Study.createRoute(deckId))
+                    }
+                )
+            }
+            composable(
+                route = Screen.DeckDetail.route,
+                arguments = listOf(navArgument("deckId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val deckId = backStackEntry.arguments?.getLong("deckId") ?: return@composable
+                DeckDetailScreen(
+                    deckId = deckId,
+                    onBack = { navController.popBackStack() },
+                    onStartStudy = { navController.navigate(Screen.Study.createRoute(deckId)) }
+                )
             }
             composable(
                 route = Screen.Study.route,

@@ -14,6 +14,7 @@ import com.lycoris.lycosheet.domain.usecase.deck.CreateDeckUseCase
 import com.lycoris.lycosheet.domain.usecase.deck.DeleteDeckUseCase
 import com.lycoris.lycosheet.domain.usecase.deck.GetAllDecksUseCase
 import com.lycoris.lycosheet.domain.usecase.deck.GetDeckByIdUseCase
+import com.lycoris.lycosheet.presentation.deck.DeckDetailViewModel
 import com.lycoris.lycosheet.presentation.home.HomeViewModel
 import com.lycoris.lycosheet.presentation.library.LibraryViewModel
 import com.lycoris.lycosheet.presentation.settings.SettingsViewModel
@@ -45,6 +46,7 @@ val sharedModule = module {
     // On Android, koinViewModel() handles the ViewModel lifecycle scope.
     factory { HomeViewModel(get(), get(), get()) }
     factory { LibraryViewModel(get(), get(), get()) }
+    factory { DeckDetailViewModel(get(), get(), get(), get()) }
     factory { StudyViewModel(get(), get()) }
     factory { SettingsViewModel() }
 }
