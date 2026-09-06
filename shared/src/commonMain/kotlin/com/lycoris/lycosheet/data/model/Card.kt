@@ -5,6 +5,9 @@ data class Card(
     val deckId: Long,
     val front: String,
     val back: String,
+    val cardType: CardType = CardType.CLASSIC,
+    /** Pipe-delimited wrong choices for MULTIPLE_CHOICE; empty for other types. */
+    val extraData: String = "",
     val createdAt: Long = 0L,
     val seenCount: Int = 0
 )

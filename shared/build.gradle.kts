@@ -71,7 +71,7 @@ sqldelight {
     databases {
         create("LycoSheetDatabase") {
             packageName.set("com.lycoris.lycosheet.db")
-            version = 2
+            version = 3
         }
     }
 }

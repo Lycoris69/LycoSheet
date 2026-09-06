@@ -3,6 +3,7 @@ package com.lycoris.lycosheet.data.repository.impl
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.lycoris.lycosheet.data.model.Card
+import com.lycoris.lycosheet.data.model.CardType
 import com.lycoris.lycosheet.data.repository.CardRepository
 import com.lycoris.lycosheet.db.LycoSheetDatabase
 import com.lycoris.lycosheet.util.currentTimeMillis
@@ -26,15 +27,20 @@ class CardRepositoryImpl(private val db: LycoSheetDatabase) : CardRepository {
             queries.selectById(id).executeAsOneOrNull()?.toCard()
         }
 
-    override suspend fun createCard(deckId: Long, front: String, back: String): Long =
-        withContext(Dispatchers.Default) {
-            queries.insert(deckId, front, back, currentTimeMillis())
-            queries.lastInsertRowId().executeAsOne()
-        }
+    override suspend fun createCard(
+        deckId: Long,
+        front: String,
+        back: String,
+        cardType: CardType,
+        extraData: String
+    ): Long = withContext(Dispatchers.Default) {
+        queries.insert(deckId, front, back, cardType.name, extraData, currentTimeMillis())
+        queries.lastInsertRowId().executeAsOne()
+    }
 
     override suspend fun updateCard(card: Card) =
         withContext(Dispatchers.Default) {
-            queries.update(card.front, card.back, card.id)
+            queries.update(card.front, card.back, card.cardType.name, card.extraData, card.id)
         }
 
     override suspend fun deleteCard(id: Long) =
@@ -57,6 +63,8 @@ class CardRepositoryImpl(private val db: LycoSheetDatabase) : CardRepository {
         deckId = deck_id,
         front = front,
         back = back,
+        cardType = runCatching { CardType.valueOf(card_type) }.getOrDefault(CardType.CLASSIC),
+        extraData = extra_data,
         createdAt = created_at,
         seenCount = seen_count.toInt()
     )

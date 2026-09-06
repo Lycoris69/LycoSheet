@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.lycoris.lycosheet.data.model.CardType
 import com.lycoris.lycosheet.presentation.home.HomeViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -15,7 +16,6 @@ import org.koin.compose.viewmodel.koinViewModel
 fun HomeScreen(viewModel: HomeViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
 
-    // Show snackbar on save
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state.cardSaved) {
         if (state.cardSaved) {
@@ -24,10 +24,12 @@ fun HomeScreen(viewModel: HomeViewModel = koinViewModel()) {
         }
     }
 
+    val saveEnabled = state.frontText.isNotBlank() && state.backText.isNotBlank() && !state.isLoading &&
+            (state.cardType != CardType.MULTIPLE_CHOICE ||
+                    state.wrongChoice1.isNotBlank() || state.wrongChoice2.isNotBlank() || state.wrongChoice3.isNotBlank())
+
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("New Card") })
-        },
+        topBar = { TopAppBar(title = { Text("New Card") }) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
@@ -39,7 +41,7 @@ fun HomeScreen(viewModel: HomeViewModel = koinViewModel()) {
         ) {
             Spacer(Modifier.height(8.dp))
 
-            // Deck selector / name field
+            // ── Deck selector ──────────────────────────────────────────────
             if (state.availableDecks.isEmpty()) {
                 OutlinedTextField(
                     value = state.deckName,
@@ -87,34 +89,35 @@ fun HomeScreen(viewModel: HomeViewModel = koinViewModel()) {
                 }
             }
 
-            // Front face
-            OutlinedTextField(
-                value = state.frontText,
-                onValueChange = viewModel::onFrontChanged,
-                label = { Text("Front (recto)") },
-                placeholder = { Text("Word, phrase, question…") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
-                maxLines = 5
+            // ── Card type selector ─────────────────────────────────────────
+            val cardTypes = listOf(
+                CardType.CLASSIC to "Classic",
+                CardType.MULTIPLE_CHOICE to "Multiple Choice",
+                CardType.FILL_IN to "Fill-in"
             )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                cardTypes.forEachIndexed { index, (type, label) ->
+                    SegmentedButton(
+                        selected = state.cardType == type,
+                        onClick = { viewModel.onCardTypeChanged(type) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = cardTypes.size),
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
+            }
 
-            // Back face
-            OutlinedTextField(
-                value = state.backText,
-                onValueChange = viewModel::onBackChanged,
-                label = { Text("Back (verso)") },
-                placeholder = { Text("Definition, translation, answer…") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
-                maxLines = 5
-            )
+            // ── Type-specific form ─────────────────────────────────────────
+            when (state.cardType) {
+                CardType.CLASSIC -> ClassicCardForm(state, viewModel)
+                CardType.MULTIPLE_CHOICE -> MultipleChoiceCardForm(state, viewModel)
+                CardType.FILL_IN -> FillInCardForm(state, viewModel)
+            }
 
+            // ── Save button ────────────────────────────────────────────────
             Button(
                 onClick = viewModel::saveCard,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.frontText.isNotBlank() && state.backText.isNotBlank() && !state.isLoading
+                enabled = saveEnabled
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(
@@ -130,4 +133,91 @@ fun HomeScreen(viewModel: HomeViewModel = koinViewModel()) {
             Spacer(Modifier.height(16.dp))
         }
     }
+}
+
+@Composable
+private fun ClassicCardForm(state: com.lycoris.lycosheet.presentation.home.HomeState, viewModel: HomeViewModel) {
+    OutlinedTextField(
+        value = state.frontText,
+        onValueChange = viewModel::onFrontChanged,
+        label = { Text("Front (recto)") },
+        placeholder = { Text("Word, phrase, question…") },
+        modifier = Modifier.fillMaxWidth().height(130.dp),
+        maxLines = 5
+    )
+    OutlinedTextField(
+        value = state.backText,
+        onValueChange = viewModel::onBackChanged,
+        label = { Text("Back (verso)") },
+        placeholder = { Text("Definition, translation, answer…") },
+        modifier = Modifier.fillMaxWidth().height(130.dp),
+        maxLines = 5
+    )
+}
+
+@Composable
+private fun MultipleChoiceCardForm(state: com.lycoris.lycosheet.presentation.home.HomeState, viewModel: HomeViewModel) {
+    OutlinedTextField(
+        value = state.frontText,
+        onValueChange = viewModel::onFrontChanged,
+        label = { Text("Question") },
+        placeholder = { Text("What is the capital of France?") },
+        modifier = Modifier.fillMaxWidth().height(100.dp),
+        maxLines = 4
+    )
+    OutlinedTextField(
+        value = state.backText,
+        onValueChange = viewModel::onBackChanged,
+        label = { Text("Correct answer") },
+        placeholder = { Text("Paris") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    Text(
+        "Wrong choices (add at least one)",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    OutlinedTextField(
+        value = state.wrongChoice1,
+        onValueChange = viewModel::onWrongChoice1Changed,
+        label = { Text("Wrong choice 1") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    OutlinedTextField(
+        value = state.wrongChoice2,
+        onValueChange = viewModel::onWrongChoice2Changed,
+        label = { Text("Wrong choice 2") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    OutlinedTextField(
+        value = state.wrongChoice3,
+        onValueChange = viewModel::onWrongChoice3Changed,
+        label = { Text("Wrong choice 3") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+}
+
+@Composable
+private fun FillInCardForm(state: com.lycoris.lycosheet.presentation.home.HomeState, viewModel: HomeViewModel) {
+    OutlinedTextField(
+        value = state.frontText,
+        onValueChange = viewModel::onFrontChanged,
+        label = { Text("Sentence") },
+        placeholder = { Text("The capital of France is ___.") },
+        supportingText = { Text("Use ___ to mark the blank") },
+        modifier = Modifier.fillMaxWidth().height(120.dp),
+        maxLines = 5
+    )
+    OutlinedTextField(
+        value = state.backText,
+        onValueChange = viewModel::onBackChanged,
+        label = { Text("Correct answer") },
+        placeholder = { Text("Paris") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
 }

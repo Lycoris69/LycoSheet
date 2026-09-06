@@ -2,6 +2,7 @@ package com.lycoris.lycosheet.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lycoris.lycosheet.data.model.CardType
 import com.lycoris.lycosheet.domain.usecase.card.CreateCardUseCase
 import com.lycoris.lycosheet.domain.usecase.deck.CreateDeckUseCase
 import com.lycoris.lycosheet.domain.usecase.deck.GetAllDecksUseCase
@@ -32,23 +33,40 @@ class HomeViewModel(
     fun onBackChanged(text: String) = _state.update { it.copy(backText = text) }
     fun onDeckNameChanged(name: String) = _state.update { it.copy(deckName = name) }
     fun onDeckSelected(deckId: Long?) = _state.update { it.copy(selectedDeckId = deckId) }
+    fun onCardTypeChanged(type: CardType) = _state.update { it.copy(cardType = type) }
+    fun onWrongChoice1Changed(text: String) = _state.update { it.copy(wrongChoice1 = text) }
+    fun onWrongChoice2Changed(text: String) = _state.update { it.copy(wrongChoice2 = text) }
+    fun onWrongChoice3Changed(text: String) = _state.update { it.copy(wrongChoice3 = text) }
 
     fun saveCard() {
         val s = _state.value
         if (s.frontText.isBlank() || s.backText.isBlank()) return
+        if (s.cardType == CardType.MULTIPLE_CHOICE &&
+            s.wrongChoice1.isBlank() && s.wrongChoice2.isBlank() && s.wrongChoice3.isBlank()) return
+
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             try {
                 val deckId = s.selectedDeckId ?: createDeck(
                     name = s.deckName.ifBlank { "My Deck" }
                 )
-                createCard(deckId, s.frontText.trim(), s.backText.trim())
+                val extraData = when (s.cardType) {
+                    CardType.MULTIPLE_CHOICE -> listOf(s.wrongChoice1, s.wrongChoice2, s.wrongChoice3)
+                        .filter { it.isNotBlank() }
+                        .joinToString("|")
+                    else -> ""
+                }
+                createCard(deckId, s.frontText.trim(), s.backText.trim(), s.cardType, extraData)
                 _state.update {
                     it.copy(
                         frontText = "",
                         backText = "",
+                        wrongChoice1 = "",
+                        wrongChoice2 = "",
+                        wrongChoice3 = "",
                         isLoading = false,
                         cardSaved = true
+                        // cardType intentionally kept — user likely wants to create more of the same type
                     )
                 }
             } catch (e: Exception) {
