@@ -1,27 +1,32 @@
 # LycoSheet
 
-A Kotlin Multiplatform Mobile flashcard app for Android and iOS. Create double-sided revision cards (recto/verso) and study them one by one with a tap-to-flip mechanic — ideal for vocabulary, definitions, and any recall-based learning.
+A Kotlin Multiplatform Mobile flashcard app for Android and iOS. Create revision cards and study them with multiple question formats — tap-to-flip, multiple choice, or fill-in-the-blank — ideal for vocabulary, definitions, and any recall-based learning.
 
 ## Features
 
-- **Create cards** — write a front (question/term) and back (answer/definition), assign to a deck or create one on the fly
+- **Three card types** — choose when creating or editing; switch type non-destructively in the editor
+  - 🃏 **Classic** — tap to flip front ↔ back
+  - 🔘 **Multiple Choice** — pick the correct answer from up to 4 shuffled choices
+  - ✏️ **Fill-in** — type the missing word and check your answer
+- **Create cards** — front (question/term) + back (answer/definition); assign to a deck or create one on the fly
+- **Deck detail view** — tap any deck to see all its cards in a 2-column grid with type badges and seen counters; edit or delete individual cards inline
 - **Library** — browse all decks with live card counts; start a study session from any deck
-- **Study session** — cards displayed one at a time, tap to flip recto↔verso; after revealing the answer, grade yourself:
+- **Study session** — per-type question UI; after answering, grade yourself:
   - 🔴 **Again** — didn't know it; card is re-queued at the end of the session
   - ⬜ **Ok** — knew it somewhat
   - 🟢 **Good** — knew it easily
-- **Seen counter** — each card shows how many times it has been studied across all sessions
+- **Seen counter** — each card tracks how many times it has been studied across all sessions
 - **Session summary** — completion screen shows your Again / Ok / Good breakdown
 - **Settings** — appearance and app-level preferences
 
 ## Download
 
-Latest release: [v0.1.3](https://github.com/Lycoris69/LycoSheet/releases/tag/v0.1.3)
+Latest release: [v0.1.5](https://github.com/Lycoris69/LycoSheet/releases/tag/v0.1.5)
 
 | Platform | Asset |
 |---|---|
-| Android | `LycoSheet-v0.1.3.apk` |
-| iOS (XCFramework) | `LycoSheet-v0.1.3.xcframework.zip` |
+| Android | `LycoSheet-v0.1.5.apk` |
+| iOS (XCFramework) | `LycoSheet-v0.1.5.xcframework.zip` |
 
 Install the APK directly on any Android device (API 24+). The XCFramework is for integrating the shared Kotlin logic into an Xcode project.
 
@@ -42,19 +47,19 @@ Install the APK directly on any Android device (API 24+). The XCFramework is for
 ```
 shared/               ← KMP module (Android + iOS)
   commonMain/
-    data/model/       ← Card, Deck, StudySession, CardGrade
+    data/model/       ← Card, CardType, Deck, StudySession, CardGrade
     data/repository/  ← interfaces + SQLDelight-backed impls
     di/               ← Koin SharedModule, DatabaseDriverFactory (expect)
     domain/usecase/   ← deck/ and card/ use cases
-    presentation/     ← home/ library/ study/ settings/ (ViewModel + State)
-    sqldelight/       ← Card.sq, Deck.sq + 1.sqm migration
+    presentation/     ← home/ library/ deck/ study/ settings/ (ViewModel + State)
+    sqldelight/       ← Card.sq, Deck.sq + 1.sqm, 2.sqm migrations
   androidMain/        ← DatabaseDriverFactory.android.kt, Platform.android.kt
   iosMain/            ← DatabaseDriverFactory.ios.kt, Platform.ios.kt
 
 androidApp/           ← Android application module
-  ui/home/            ← HomeScreen.kt
-  ui/library/         ← LibraryScreen.kt
-  ui/study/           ← StudyScreen.kt (grading + seen counter)
+  ui/home/            ← HomeScreen.kt (type selector + dynamic form)
+  ui/library/         ← LibraryScreen.kt, DeckDetailScreen.kt (card grid + editor)
+  ui/study/           ← StudyScreen.kt (Classic / Multiple Choice / Fill-in)
   ui/settings/        ← SettingsScreen.kt
   ui/components/      ← FlashCard.kt (Y-axis flip animation)
   ui/navigation/      ← Screen.kt (sealed routes), NavGraph.kt
@@ -64,11 +69,14 @@ androidApp/           ← Android application module
 
 ## Database schema
 
-Current version: **2**
+Current version: **3**
 
 | Migration | Change |
 |---|---|
 | 1 → 2 | `CardEntity.seen_count INTEGER DEFAULT 0` added |
+| 2 → 3 | `CardEntity.card_type TEXT DEFAULT 'CLASSIC'` and `extra_data TEXT DEFAULT ''` added |
+
+`extra_data` stores pipe-delimited wrong choices for Multiple Choice cards; empty for Classic and Fill-in.
 
 ## Build
 
@@ -100,6 +108,9 @@ MVVM + Clean Architecture:
 - **ViewModel** — `androidx.lifecycle` KMP; state exposed as `StateFlow`, collected in Compose with `collectAsState()`
 - **Repository** — SQLDelight 2, reactive `Flow<List<T>>` via `asFlow()` + `mapToList()`
 - **DI** — Koin; ViewModels registered as `factory {}` in `sharedModule` (iOS-compatible), Android `koinViewModel()` manages lifecycle scope
-- **Card flip** — pure UI animation (`animateFloatAsState` on `rotationY`), no DB write; resets each session
+- **Card types** — `CardType` enum (`CLASSIC | MULTIPLE_CHOICE | FILL_IN`); stored as enum name string in DB; `extraData` holds pipe-delimited wrong choices for MC
+- **Edit non-destructive** — the edit dialog keeps independent local state per type; switching the type selector never clears data for another type
+- **Study per-type UI** — keyed by `currentIndex` so local state (selected choice, user input, revealed) resets each card; grade buttons appear after answering for all types
+- **Card flip** — pure UI animation (`animateFloatAsState` on `rotationY`), Classic only, no DB write
 - **Grading** — `StudyViewModel.gradeCard(CardGrade)` records the grade in-memory and advances; `AGAIN` appends the card to the end of the session queue
-- **Seen counter** — `IncrementCardSeenUseCase` increments `seen_count` in the DB each time a card is displayed; the count is shown as a badge on the card
+- **Seen counter** — `IncrementCardSeenUseCase` increments `seen_count` in the DB each time a card is displayed; shown as a badge in study and deck detail
