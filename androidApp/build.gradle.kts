@@ -12,8 +12,8 @@ android {
         applicationId = "com.lycoris.lycosheet.android"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "0.1.6"
+        versionCode = 7
+        versionName = "0.1.7"
     }
 
     signingConfigs {
