@@ -11,7 +11,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -21,11 +25,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.lycoris.lycosheet.android.BuildConfig
+import com.lycoris.lycosheet.android.ui.components.UpdateDialog
 import com.lycoris.lycosheet.android.ui.home.HomeScreen
 import com.lycoris.lycosheet.android.ui.library.DeckDetailScreen
 import com.lycoris.lycosheet.android.ui.library.LibraryScreen
 import com.lycoris.lycosheet.android.ui.settings.SettingsScreen
 import com.lycoris.lycosheet.android.ui.study.StudyScreen
+import com.lycoris.lycosheet.android.util.UpdateInfo
+import com.lycoris.lycosheet.android.util.checkForUpdate
 
 private data class BottomNavItem(
     val screen: Screen,
@@ -38,6 +46,21 @@ fun LycoSheetNavGraph() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    // ── Update check ────────────────────────────────────────────────────────
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    LaunchedEffect(Unit) {
+        updateInfo = checkForUpdate(BuildConfig.VERSION_NAME)
+    }
+    updateInfo?.let { info ->
+        UpdateDialog(
+            currentVersion = BuildConfig.VERSION_NAME,
+            latestVersion  = info.latestVersion,
+            releaseUrl     = info.releaseUrl,
+            onDismiss      = { updateInfo = null }
+        )
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     val bottomNavItems = listOf(
         BottomNavItem(Screen.Home, "Create", Icons.Default.Home),
