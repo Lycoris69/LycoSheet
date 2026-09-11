@@ -18,6 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Stop
+import com.lycoris.lycosheet.android.ui.components.PronunciationRecorder
+import com.lycoris.lycosheet.android.ui.study.PronunciationButton
 import com.lycoris.lycosheet.audio.AudioPlayer
 import com.lycoris.lycosheet.data.model.Card
 import com.lycoris.lycosheet.data.model.CardType
@@ -50,8 +52,8 @@ fun DeckDetailScreen(
         EditCardDialog(
             card = card,
             onDismiss = { editingCard = null },
-            onConfirm = { front, back, type, extra ->
-                viewModel.updateCard(card.copy(front = front, back = back, cardType = type, extraData = extra))
+            onConfirm = { front, back, type, extra, pronunciationPath ->
+                viewModel.updateCard(card.copy(front = front, back = back, cardType = type, extraData = extra, pronunciationPath = pronunciationPath))
                 editingCard = null
             }
         )
@@ -260,8 +262,16 @@ private fun CardGridItem(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Pronunciation playback if clip exists
+                if (card.pronunciationPath.isNotBlank()) {
+                    PronunciationButton(
+                        path = card.pronunciationPath,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
                 IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Default.Edit,
@@ -326,7 +336,7 @@ private fun TypeBadge(type: CardType) {
 private fun EditCardDialog(
     card: Card,
     onDismiss: () -> Unit,
-    onConfirm: (front: String, back: String, type: CardType, extra: String) -> Unit
+    onConfirm: (front: String, back: String, type: CardType, extra: String, pronunciationPath: String) -> Unit
 ) {
     var currentType by remember(card.id) { mutableStateOf(card.cardType) }
 
@@ -370,6 +380,9 @@ private fun EditCardDialog(
     var listeningBack by remember(card.id) {
         mutableStateOf(if (card.cardType == CardType.LISTENING) card.back else "")
     }
+
+    // Pronunciation — shared across all types; pre-filled from card
+    var pronunciationPath by remember(card.id) { mutableStateOf(card.pronunciationPath) }
 
     val saveEnabled = when (currentType) {
         CardType.CLASSIC -> classicFront.isNotBlank() && classicBack.isNotBlank()
@@ -483,6 +496,13 @@ private fun EditCardDialog(
                         )
                     }
                 }
+
+                // Pronunciation recorder — shown on all types
+                PronunciationRecorder(
+                    pronunciationPath = pronunciationPath,
+                    onPathChanged = { pronunciationPath = it },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
@@ -499,7 +519,7 @@ private fun EditCardDialog(
                         // Keep original audio path (extraData) unchanged
                         CardType.LISTENING -> Triple(listeningHint, listeningBack, card.extraData)
                     }
-                    onConfirm(front, back, currentType, extra)
+                    onConfirm(front, back, currentType, extra, pronunciationPath)
                 }
             ) { Text("Save") }
         },

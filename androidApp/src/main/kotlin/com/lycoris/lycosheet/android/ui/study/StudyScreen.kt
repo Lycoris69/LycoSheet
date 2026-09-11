@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -139,6 +140,7 @@ private fun ClassicCard(
                 modifier = Modifier.fillMaxWidth().height(280.dp)
             )
             if (card.seenCount > 0) SeenBadge(card.seenCount, Modifier.align(Alignment.TopEnd).padding(8.dp))
+            PronunciationButton(card.pronunciationPath, Modifier.align(Alignment.TopStart))
         }
 
         AnimatedContent(
@@ -214,6 +216,7 @@ private fun MultipleChoiceCard(card: Card, onGrade: (CardGrade) -> Unit) {
                     textAlign = TextAlign.Center
                 )
                 if (card.seenCount > 0) SeenBadge(card.seenCount, Modifier.align(Alignment.TopEnd).padding(8.dp))
+                PronunciationButton(card.pronunciationPath, Modifier.align(Alignment.TopStart))
             }
         }
 
@@ -289,6 +292,7 @@ private fun FillInCard(card: Card, onGrade: (CardGrade) -> Unit) {
                     textAlign = TextAlign.Center
                 )
                 if (card.seenCount > 0) SeenBadge(card.seenCount, Modifier.align(Alignment.TopEnd).padding(8.dp))
+                PronunciationButton(card.pronunciationPath, Modifier.align(Alignment.TopStart))
             }
         }
 
@@ -412,6 +416,7 @@ private fun ListeningCard(card: Card, onGrade: (CardGrade) -> Unit) {
                     )
                 }
                 if (card.seenCount > 0) SeenBadge(card.seenCount, Modifier.align(Alignment.TopEnd).padding(8.dp))
+                PronunciationButton(card.pronunciationPath, Modifier.align(Alignment.TopStart))
             }
         }
 
@@ -487,6 +492,32 @@ private fun GradeRow(onGrade: (CardGrade) -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** Small 🔊 icon button shown on any card that has a pronunciation clip.
+ *  Manages its own playing state; auto-stops when it leaves composition. */
+@Composable
+fun PronunciationButton(path: String, modifier: Modifier = Modifier) {
+    if (path.isBlank()) return
+    val player: AudioPlayer = koinInject()
+    var isPlaying by remember { mutableStateOf(false) }
+
+    DisposableEffect(path) { onDispose { player.stop() } }
+
+    IconButton(
+        onClick = {
+            if (isPlaying) { player.stop(); isPlaying = false }
+            else { isPlaying = true; player.play(path) { isPlaying = false } }
+        },
+        modifier = modifier
+    ) {
+        Icon(
+            Icons.Default.VolumeUp,
+            contentDescription = if (isPlaying) "Stop pronunciation" else "Play pronunciation",
+            tint = if (isPlaying) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

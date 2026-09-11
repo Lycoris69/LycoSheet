@@ -13,6 +13,8 @@ data class HomeState(
     val wrongChoice3: String = "",
     // Absolute file path for LISTENING cards; persists across type switches
     val audioPath: String = "",
+    // Optional pronunciation clip available on ALL card types
+    val pronunciationPath: String = "",
     val deckName: String = "",
     val selectedDeckId: Long? = null,
     val availableDecks: List<Deck> = emptyList(),

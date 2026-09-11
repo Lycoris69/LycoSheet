@@ -38,6 +38,7 @@ class HomeViewModel(
     fun onWrongChoice2Changed(text: String) = _state.update { it.copy(wrongChoice2 = text) }
     fun onWrongChoice3Changed(text: String) = _state.update { it.copy(wrongChoice3 = text) }
     fun onAudioPathChanged(path: String) = _state.update { it.copy(audioPath = path) }
+    fun onPronunciationPathChanged(path: String) = _state.update { it.copy(pronunciationPath = path) }
 
     fun saveCard() {
         val s = _state.value
@@ -63,7 +64,7 @@ class HomeViewModel(
                     CardType.LISTENING -> s.frontText.trim() to s.audioPath // front = optional hint
                     else -> s.frontText.trim() to ""
                 }
-                createCard(deckId, front, s.backText.trim(), s.cardType, extraData)
+                createCard(deckId, front, s.backText.trim(), s.cardType, extraData, s.pronunciationPath)
                 _state.update {
                     it.copy(
                         frontText = "",
@@ -71,7 +72,8 @@ class HomeViewModel(
                         wrongChoice1 = "",
                         wrongChoice2 = "",
                         wrongChoice3 = "",
-                        audioPath = "",   // reset audio after save; user records a new clip for each card
+                        audioPath = "",
+                        pronunciationPath = "",
                         isLoading = false,
                         cardSaved = true
                         // cardType kept so user can batch-create

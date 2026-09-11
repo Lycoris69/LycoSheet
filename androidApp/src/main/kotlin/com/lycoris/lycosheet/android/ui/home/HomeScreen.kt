@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.lycoris.lycosheet.android.audio.AudioRecorderHelper
+import com.lycoris.lycosheet.android.ui.components.PronunciationRecorder
 import com.lycoris.lycosheet.audio.AudioPlayer
 import com.lycoris.lycosheet.data.model.CardType
 import com.lycoris.lycosheet.presentation.home.HomeState
@@ -175,6 +176,11 @@ private fun ClassicCardForm(state: HomeState, viewModel: HomeViewModel) {
         modifier = Modifier.fillMaxWidth().height(130.dp),
         maxLines = 5
     )
+    PronunciationRecorder(
+        pronunciationPath = state.pronunciationPath,
+        onPathChanged = viewModel::onPronunciationPathChanged,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -221,6 +227,11 @@ private fun MultipleChoiceCardForm(state: HomeState, viewModel: HomeViewModel) {
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
     )
+    PronunciationRecorder(
+        pronunciationPath = state.pronunciationPath,
+        onPathChanged = viewModel::onPronunciationPathChanged,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -241,6 +252,11 @@ private fun FillInCardForm(state: HomeState, viewModel: HomeViewModel) {
         placeholder = { Text("Paris") },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
+    )
+    PronunciationRecorder(
+        pronunciationPath = state.pronunciationPath,
+        onPathChanged = viewModel::onPronunciationPathChanged,
+        modifier = Modifier.fillMaxWidth()
     )
 }
 
@@ -406,5 +422,11 @@ private fun ListeningCardForm(state: HomeState, viewModel: HomeViewModel) {
         placeholder = { Text("What the audio says") },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
+    )
+    // Pronunciation clip is separate from the main audio (which is extraData for LISTENING)
+    PronunciationRecorder(
+        pronunciationPath = state.pronunciationPath,
+        onPathChanged = viewModel::onPronunciationPathChanged,
+        modifier = Modifier.fillMaxWidth()
     )
 }

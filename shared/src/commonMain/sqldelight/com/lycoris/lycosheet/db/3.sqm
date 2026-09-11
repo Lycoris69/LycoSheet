@@ -1,0 +1,1 @@
+ALTER TABLE CardEntity ADD COLUMN pronunciation_path TEXT NOT NULL DEFAULT '';
