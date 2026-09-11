@@ -43,8 +43,9 @@ class IpaLookupService(
         val clean = word.trim().lowercase()
         if (clean.isBlank()) return null
 
-        // 1. Offline library — use if available (fastest path)
-        val offlineIpa = library.lookup(clean)
+        // 1. Offline library — try en_US first, then en_UK as fallback
+        val offlineIpa = library.lookup(clean, "en_US")
+            ?: library.lookup(clean, "en_UK")
 
         // 2. Online — always try when connected (gives us audio too)
         val online = runCatching { fetchOnline(clean) }.getOrNull()

@@ -2,8 +2,8 @@ package com.lycoris.lycosheet.android.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -30,6 +30,7 @@ import com.lycoris.lycosheet.android.ui.components.UpdateDialog
 import com.lycoris.lycosheet.android.ui.home.HomeScreen
 import com.lycoris.lycosheet.android.ui.library.DeckDetailScreen
 import com.lycoris.lycosheet.android.ui.library.LibraryScreen
+import com.lycoris.lycosheet.android.ui.library.WordLibraryScreen
 import com.lycoris.lycosheet.android.ui.settings.SettingsScreen
 import com.lycoris.lycosheet.android.ui.study.StudyScreen
 import com.lycoris.lycosheet.android.util.UpdateInfo
@@ -64,7 +65,7 @@ fun LycoSheetNavGraph() {
 
     val bottomNavItems = listOf(
         BottomNavItem(Screen.Home, "Create", Icons.Default.Home),
-        BottomNavItem(Screen.Library, "Library", Icons.Default.LibraryBooks),
+        BottomNavItem(Screen.Library, "Library", Icons.AutoMirrored.Filled.LibraryBooks),
         BottomNavItem(Screen.Settings, "Settings", Icons.Default.Settings)
     )
 
@@ -127,7 +128,16 @@ fun LycoSheetNavGraph() {
                 val deckId = backStackEntry.arguments?.getLong("deckId") ?: return@composable
                 StudyScreen(deckId = deckId, onBack = { navController.popBackStack() })
             }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateToWordLibraries = {
+                        navController.navigate(Screen.WordLibraries.route)
+                    }
+                )
+            }
+            composable(Screen.WordLibraries.route) {
+                WordLibraryScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }

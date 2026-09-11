@@ -8,87 +8,100 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Manages the offline IPA pronunciation dictionary.
+ * Manages offline IPA pronunciation dictionaries for multiple languages.
  *
- * Source: https://github.com/open-dict-data/ipa-dict (en_US, ~115K entries, ~2.4 MB)
+ * Source: https://github.com/open-dict-data/ipa-dict
  * Format: one "word\t/IPA/" per line, alphabetically sorted.
  *
- * The file is downloaded once to [filesDir]/ipa_dict/en_US.txt and kept until [delete] is called.
- * On first [lookup] after download the file is parsed into an in-memory HashMap (~12 MB heap).
+ * Files are stored at [filesDir]/ipa_dict/{code}.txt and kept until [delete] is called.
+ * Each language's words are loaded into a HashMap on first [lookup] (~12 MB per language).
  */
-class IpaLibraryManager(context: Context) {
+class IpaLibraryManager(private val context: Context) {
 
-    private val dictFile = File(context.filesDir, "ipa_dict/en_US.txt").also {
-        it.parentFile?.mkdirs()
-    }
+    private val dictDir = File(context.filesDir, "ipa_dict").also { it.mkdirs() }
 
-    /** Whether the library has been downloaded. */
-    val isDownloaded: Boolean get() = dictFile.exists() && dictFile.length() > 0
+    /** In-memory caches, keyed by language code. Null = not loaded yet. */
+    private val caches = mutableMapOf<String, HashMap<String, String>?>()
 
-    /** File size in bytes, or 0 if not downloaded. */
-    val fileSizeBytes: Long get() = if (isDownloaded) dictFile.length() else 0L
+    // ── Status ────────────────────────────────────────────────────────────────
 
-    private var cache: HashMap<String, String>? = null
+    fun fileFor(code: String): File = File(dictDir, "$code.txt")
+    fun isDownloaded(code: String): Boolean = fileFor(code).let { it.exists() && it.length() > 0 }
+    fun fileSizeBytes(code: String): Long = if (isDownloaded(code)) fileFor(code).length() else 0L
+
+    /** Returns the codes of all currently downloaded libraries. */
+    fun downloadedCodes(): Set<String> =
+        (dictDir.listFiles() ?: emptyArray())
+            .filter { it.extension == "txt" && it.length() > 0 }
+            .map { it.nameWithoutExtension }
+            .toSet()
+
+    // ── Lookup ────────────────────────────────────────────────────────────────
 
     /**
-     * Look up the IPA string for a single word (case-insensitive).
-     * Returns the first pronunciation if there are multiple (separated by ", ").
-     * Returns null when not in the library or library not downloaded.
+     * Look up IPA for [word] in the given [code] library (defaults to "en_US").
+     * Returns null when not found or the library is not downloaded.
      */
-    fun lookup(word: String): String? {
-        if (!isDownloaded) return null
-        val map = cache ?: loadCache()
+    fun lookup(word: String, code: String = "en_US"): String? {
+        if (!isDownloaded(code)) return null
+        val map = caches[code] ?: loadCache(code)
         val raw = map[word.lowercase().trim()] ?: return null
-        // Some entries have multiple pronunciations: "/ˈwɔtɚ/, /ˈwɑtɚ/" → take first
+        // Take the first pronunciation when multiple exist, e.g. "/ˈwɔtɚ/, /ˈwɑtɚ/"
         return raw.substringBefore(",").trim()
     }
 
+    // ── Download ──────────────────────────────────────────────────────────────
+
     /**
-     * Download the English IPA dictionary from GitHub.
+     * Download the IPA dictionary for [language] from GitHub.
      * [onProgress] receives values from 0f to 1f.
-     * Throws on network/IO error.
+     * Throws on network / IO error.
      */
-    suspend fun download(onProgress: (Float) -> Unit) = withContext(Dispatchers.IO) {
-        val src = URL("https://raw.githubusercontent.com/open-dict-data/ipa-dict/master/data/en_US.txt")
-        val connection = (src.openConnection() as HttpURLConnection).apply {
-            setRequestProperty("User-Agent", "LycoSheet-Android")
-            connectTimeout = 15_000
-            readTimeout    = 30_000
-        }
+    suspend fun download(language: IpaLanguage, onProgress: (Float) -> Unit) =
+        withContext(Dispatchers.IO) {
+            val connection = (URL(language.downloadUrl).openConnection() as HttpURLConnection).apply {
+                setRequestProperty("User-Agent", "LycoSheet-Android")
+                connectTimeout = 15_000
+                readTimeout    = 30_000
+            }
 
-        val totalBytes = connection.contentLengthLong.takeIf { it > 0 } ?: 2_500_000L
-        var bytesRead = 0L
+            val totalBytes = connection.contentLengthLong
+                .takeIf { it > 0 }
+                ?: (language.sizeEstimateKb * 1_000L)
+            var bytesRead = 0L
 
-        connection.inputStream.use { input ->
-            dictFile.outputStream().use { output ->
-                val buf = ByteArray(8192)
-                var n: Int
-                while (input.read(buf).also { n = it } != -1) {
-                    output.write(buf, 0, n)
-                    bytesRead += n
-                    onProgress((bytesRead.toFloat() / totalBytes).coerceIn(0f, 1f))
+            connection.inputStream.use { input ->
+                fileFor(language.code).outputStream().use { output ->
+                    val buf = ByteArray(8_192)
+                    var n: Int
+                    while (input.read(buf).also { n = it } != -1) {
+                        output.write(buf, 0, n)
+                        bytesRead += n
+                        onProgress((bytesRead.toFloat() / totalBytes).coerceIn(0f, 1f))
+                    }
                 }
             }
+            caches[language.code] = null   // invalidate; reloaded on next lookup
+            onProgress(1f)
         }
-        cache = null   // invalidate so next lookup reloads from fresh file
-        onProgress(1f)
-    }
 
-    /** Remove the downloaded file and clear the in-memory cache. */
-    fun delete() {
-        dictFile.delete()
-        cache = null
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    /** Remove the downloaded file and evict the in-memory cache for [code]. */
+    fun delete(code: String) {
+        fileFor(code).delete()
+        caches.remove(code)
     }
 
     // ── private ───────────────────────────────────────────────────────────────
 
-    private fun loadCache(): HashMap<String, String> {
+    private fun loadCache(code: String): HashMap<String, String> {
         val map = HashMap<String, String>(130_000)
-        dictFile.forEachLine { line ->
+        fileFor(code).forEachLine { line ->
             val tab = line.indexOf('\t')
             if (tab > 0) map[line.substring(0, tab)] = line.substring(tab + 1)
         }
-        cache = map
+        caches[code] = map
         return map
     }
 }
