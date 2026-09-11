@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Stop
+import com.lycoris.lycosheet.android.ui.components.IpaLookupField
 import com.lycoris.lycosheet.android.ui.components.PronunciationRecorder
 import com.lycoris.lycosheet.android.ui.study.PronunciationButton
 import com.lycoris.lycosheet.audio.AudioPlayer
@@ -54,8 +55,17 @@ fun DeckDetailScreen(
         EditCardDialog(
             card = card,
             onDismiss = { editingCard = null },
-            onConfirm = { front, back, type, extra, pronunciationPath ->
-                viewModel.updateCard(card.copy(front = front, back = back, cardType = type, extraData = extra, pronunciationPath = pronunciationPath))
+            onConfirm = { front, back, type, extra, pronunciationPath, phoneticText ->
+                viewModel.updateCard(
+                    card.copy(
+                        front = front,
+                        back = back,
+                        cardType = type,
+                        extraData = extra,
+                        pronunciationPath = pronunciationPath,
+                        phoneticText = phoneticText
+                    )
+                )
                 editingCard = null
             }
         )
@@ -338,7 +348,7 @@ private fun TypeBadge(type: CardType) {
 private fun EditCardDialog(
     card: Card,
     onDismiss: () -> Unit,
-    onConfirm: (front: String, back: String, type: CardType, extra: String, pronunciationPath: String) -> Unit
+    onConfirm: (front: String, back: String, type: CardType, extra: String, pronunciationPath: String, phoneticText: String) -> Unit
 ) {
     var currentType by remember(card.id) { mutableStateOf(card.cardType) }
 
@@ -385,6 +395,10 @@ private fun EditCardDialog(
 
     // Pronunciation — shared across all types; pre-filled from card
     var pronunciationPath by remember(card.id) { mutableStateOf(card.pronunciationPath) }
+
+    // Phonetic text — editable, shared across all non-Listening types
+    var phoneticText by remember(card.id) { mutableStateOf(card.phoneticText) }
+    var isLookingUpIpa by remember(card.id) { mutableStateOf(false) }
 
     val saveEnabled = when (currentType) {
         CardType.CLASSIC -> classicFront.isNotBlank() && classicBack.isNotBlank()
@@ -504,9 +518,29 @@ private fun EditCardDialog(
                     }
                 }
 
-                // Pronunciation recorder — not applicable to Listening cards
-                // (the main audio already serves that role)
+                // IPA phonetics + pronunciation recorder — not applicable to Listening cards
                 if (currentType != CardType.LISTENING) {
+                    val lookupWord = when (currentType) {
+                        CardType.CLASSIC          -> classicFront
+                        CardType.MULTIPLE_CHOICE  -> mcBack
+                        CardType.FILL_IN          -> fillBack
+                        else                      -> ""
+                    }
+                    IpaLookupField(
+                        lookupWord = lookupWord,
+                        phoneticText = phoneticText,
+                        onPhoneticChanged = { phoneticText = it },
+                        onPronunciationDownloaded = { path ->
+                            if (pronunciationPath.isBlank()) pronunciationPath = path
+                        },
+                        isLooking = isLookingUpIpa,
+                        onLookupStarted = { isLookingUpIpa = true },
+                        onLookupFinished = { ipa, _, _ ->
+                            isLookingUpIpa = false
+                            if (ipa != null) phoneticText = ipa
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     PronunciationRecorder(
                         pronunciationPath = pronunciationPath,
                         onPathChanged = { pronunciationPath = it },
@@ -529,7 +563,7 @@ private fun EditCardDialog(
                         // Keep original audio path (extraData) unchanged
                         CardType.LISTENING -> Triple(listeningHint, listeningBack, card.extraData)
                     }
-                    onConfirm(front, back, currentType, extra, pronunciationPath)
+                    onConfirm(front, back, currentType, extra, pronunciationPath, phoneticText)
                 }
             ) { Text("Save") }
         },
