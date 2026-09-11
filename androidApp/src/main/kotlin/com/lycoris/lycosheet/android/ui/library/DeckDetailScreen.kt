@@ -17,9 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Stop
+import com.lycoris.lycosheet.audio.AudioPlayer
 import com.lycoris.lycosheet.data.model.Card
 import com.lycoris.lycosheet.data.model.CardType
 import com.lycoris.lycosheet.presentation.deck.DeckDetailViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -138,7 +141,13 @@ private fun CardGridItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val player: AudioPlayer = koinInject()
+    var isPlaying by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    DisposableEffect(card.id) {
+        onDispose { player.stop() }
+    }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -205,16 +214,46 @@ private fun CardGridItem(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // For MC: show wrong choices count hint
-            if (card.cardType == CardType.MULTIPLE_CHOICE) {
-                val wrongCount = card.extraData.split("|").count { it.isNotBlank() }
-                if (wrongCount > 0) {
-                    Text(
-                        "+ $wrongCount wrong option${if (wrongCount == 1) "" else "s"}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+            // Extra info per type
+            when (card.cardType) {
+                CardType.MULTIPLE_CHOICE -> {
+                    val wrongCount = card.extraData.split("|").count { it.isNotBlank() }
+                    if (wrongCount > 0) {
+                        Text(
+                            "+ $wrongCount wrong option${if (wrongCount == 1) "" else "s"}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
+                CardType.LISTENING -> {
+                    // Play button for audio preview
+                    OutlinedButton(
+                        onClick = {
+                            if (isPlaying) {
+                                player.stop(); isPlaying = false
+                            } else {
+                                isPlaying = true
+                                player.play(card.extraData) { isPlaying = false }
+                            }
+                        },
+                        enabled = card.extraData.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            if (isPlaying) "Stop" else "Play",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+                else -> {}
             }
 
             Spacer(Modifier.height(8.dp))
@@ -262,6 +301,11 @@ private fun TypeBadge(type: CardType) {
             MaterialTheme.colorScheme.secondaryContainer,
             MaterialTheme.colorScheme.onSecondaryContainer
         )
+        CardType.LISTENING -> Triple(
+            "🎧 Audio",
+            MaterialTheme.colorScheme.errorContainer,
+            MaterialTheme.colorScheme.onErrorContainer
+        )
     }
     Surface(shape = MaterialTheme.shapes.extraSmall, color = container) {
         Text(
@@ -286,7 +330,7 @@ private fun EditCardDialog(
 ) {
     var currentType by remember(card.id) { mutableStateOf(card.cardType) }
 
-    // Classic state — pre-filled if the card is currently classic
+    // Classic state
     var classicFront by remember(card.id) {
         mutableStateOf(if (card.cardType == CardType.CLASSIC) card.front else "")
     }
@@ -319,11 +363,20 @@ private fun EditCardDialog(
         mutableStateOf(if (card.cardType == CardType.FILL_IN) card.back else "")
     }
 
+    // Listening state — audio path cannot be re-recorded in the dialog (read-only)
+    var listeningHint by remember(card.id) {
+        mutableStateOf(if (card.cardType == CardType.LISTENING) card.front else "")
+    }
+    var listeningBack by remember(card.id) {
+        mutableStateOf(if (card.cardType == CardType.LISTENING) card.back else "")
+    }
+
     val saveEnabled = when (currentType) {
         CardType.CLASSIC -> classicFront.isNotBlank() && classicBack.isNotBlank()
         CardType.MULTIPLE_CHOICE -> mcFront.isNotBlank() && mcBack.isNotBlank() &&
                 (mcWrong[0].isNotBlank() || mcWrong[1].isNotBlank() || mcWrong[2].isNotBlank())
         CardType.FILL_IN -> fillFront.isNotBlank() && fillBack.isNotBlank()
+        CardType.LISTENING -> listeningBack.isNotBlank()
     }
 
     AlertDialog(
@@ -335,7 +388,8 @@ private fun EditCardDialog(
                 val types = listOf(
                     CardType.CLASSIC to "Classic",
                     CardType.MULTIPLE_CHOICE to "MC",
-                    CardType.FILL_IN to "Fill-in"
+                    CardType.FILL_IN to "Fill-in",
+                    CardType.LISTENING to "🎧"
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     types.forEachIndexed { index, (type, label) ->
@@ -402,6 +456,32 @@ private fun EditCardDialog(
                             modifier = Modifier.fillMaxWidth(), singleLine = true
                         )
                     }
+                    CardType.LISTENING -> {
+                        // Audio cannot be re-recorded from the edit dialog —
+                        // re-record by deleting and creating a new card
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "Audio clip is preserved. To replace it, delete this card and create a new one.",
+                                modifier = Modifier.padding(12.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        OutlinedTextField(
+                            value = listeningHint, onValueChange = { listeningHint = it },
+                            label = { Text("Hint (optional)") },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = listeningBack, onValueChange = { listeningBack = it },
+                            label = { Text("Transcript / answer") },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                        )
+                    }
                 }
             }
         },
@@ -416,6 +496,8 @@ private fun EditCardDialog(
                             mcWrong.filter { it.isNotBlank() }.joinToString("|")
                         )
                         CardType.FILL_IN -> Triple(fillFront, fillBack, "")
+                        // Keep original audio path (extraData) unchanged
+                        CardType.LISTENING -> Triple(listeningHint, listeningBack, card.extraData)
                     }
                     onConfirm(front, back, currentType, extra)
                 }

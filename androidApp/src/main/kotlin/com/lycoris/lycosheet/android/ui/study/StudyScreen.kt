@@ -19,10 +19,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lycoris.lycosheet.android.ui.components.FlashCard
+import com.lycoris.lycosheet.audio.AudioPlayer
 import com.lycoris.lycosheet.data.model.Card
 import com.lycoris.lycosheet.data.model.CardGrade
 import com.lycoris.lycosheet.data.model.CardType
 import com.lycoris.lycosheet.presentation.study.StudyViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +100,10 @@ fun StudyScreen(
                                         onGrade = { viewModel.gradeCard(it) }
                                     )
                                     CardType.FILL_IN -> FillInCard(
+                                        card = card,
+                                        onGrade = { viewModel.gradeCard(it) }
+                                    )
+                                    CardType.LISTENING -> ListeningCard(
                                         card = card,
                                         onGrade = { viewModel.gradeCard(it) }
                                     )
@@ -328,6 +334,106 @@ private fun FillInCard(card: Card, onGrade: (CardGrade) -> Unit) {
                         )
                     }
                 }
+            }
+            GradeRow(onGrade = onGrade)
+        }
+    }
+}
+
+// ── Listening ──────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ListeningCard(card: Card, onGrade: (CardGrade) -> Unit) {
+    val player: AudioPlayer = koinInject()
+    var isPlaying by remember { mutableStateOf(false) }
+    var revealed by remember { mutableStateOf(false) }
+
+    // Auto-stop player when the card is no longer in composition
+    DisposableEffect(Unit) {
+        onDispose { player.stop() }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Context / hint card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (card.front.isNotBlank()) {
+                        Text(
+                            card.front,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Big play / stop button
+                    FilledIconButton(
+                        onClick = {
+                            if (isPlaying) {
+                                player.stop()
+                                isPlaying = false
+                            } else {
+                                val path = card.extraData
+                                if (path.isNotBlank()) {
+                                    isPlaying = true
+                                    player.play(path) { isPlaying = false }
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(72.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (isPlaying) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Refresh else Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = if (isPlaying) "Stop" else "Play audio",
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    Text(
+                        if (isPlaying) "Playing…" else "Tap to listen",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (card.seenCount > 0) SeenBadge(card.seenCount, Modifier.align(Alignment.TopEnd).padding(8.dp))
+            }
+        }
+
+        // "Reveal transcript" button appears after the user has had a chance to listen
+        if (!revealed) {
+            OutlinedButton(
+                onClick = { revealed = true },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Reveal transcript") }
+        } else {
+            // Show transcript
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(
+                    card.back,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
             }
             GradeRow(onGrade = onGrade)
         }

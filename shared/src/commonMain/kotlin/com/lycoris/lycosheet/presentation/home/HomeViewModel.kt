@@ -37,10 +37,16 @@ class HomeViewModel(
     fun onWrongChoice1Changed(text: String) = _state.update { it.copy(wrongChoice1 = text) }
     fun onWrongChoice2Changed(text: String) = _state.update { it.copy(wrongChoice2 = text) }
     fun onWrongChoice3Changed(text: String) = _state.update { it.copy(wrongChoice3 = text) }
+    fun onAudioPathChanged(path: String) = _state.update { it.copy(audioPath = path) }
 
     fun saveCard() {
         val s = _state.value
-        if (s.frontText.isBlank() || s.backText.isBlank()) return
+        // LISTENING: back (transcript) required + audio file must exist
+        if (s.cardType == CardType.LISTENING) {
+            if (s.backText.isBlank() || s.audioPath.isBlank()) return
+        } else {
+            if (s.frontText.isBlank() || s.backText.isBlank()) return
+        }
         if (s.cardType == CardType.MULTIPLE_CHOICE &&
             s.wrongChoice1.isBlank() && s.wrongChoice2.isBlank() && s.wrongChoice3.isBlank()) return
 
@@ -50,13 +56,14 @@ class HomeViewModel(
                 val deckId = s.selectedDeckId ?: createDeck(
                     name = s.deckName.ifBlank { "My Deck" }
                 )
-                val extraData = when (s.cardType) {
-                    CardType.MULTIPLE_CHOICE -> listOf(s.wrongChoice1, s.wrongChoice2, s.wrongChoice3)
-                        .filter { it.isNotBlank() }
-                        .joinToString("|")
-                    else -> ""
+                val (front, extraData) = when (s.cardType) {
+                    CardType.MULTIPLE_CHOICE -> s.frontText.trim() to
+                            listOf(s.wrongChoice1, s.wrongChoice2, s.wrongChoice3)
+                                .filter { it.isNotBlank() }.joinToString("|")
+                    CardType.LISTENING -> s.frontText.trim() to s.audioPath // front = optional hint
+                    else -> s.frontText.trim() to ""
                 }
-                createCard(deckId, s.frontText.trim(), s.backText.trim(), s.cardType, extraData)
+                createCard(deckId, front, s.backText.trim(), s.cardType, extraData)
                 _state.update {
                     it.copy(
                         frontText = "",
@@ -64,9 +71,10 @@ class HomeViewModel(
                         wrongChoice1 = "",
                         wrongChoice2 = "",
                         wrongChoice3 = "",
+                        audioPath = "",   // reset audio after save; user records a new clip for each card
                         isLoading = false,
                         cardSaved = true
-                        // cardType intentionally kept — user likely wants to create more of the same type
+                        // cardType kept so user can batch-create
                     )
                 }
             } catch (e: Exception) {

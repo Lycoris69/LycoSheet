@@ -11,6 +11,8 @@ data class HomeState(
     val wrongChoice1: String = "",
     val wrongChoice2: String = "",
     val wrongChoice3: String = "",
+    // Absolute file path for LISTENING cards; persists across type switches
+    val audioPath: String = "",
     val deckName: String = "",
     val selectedDeckId: Long? = null,
     val availableDecks: List<Deck> = emptyList(),
