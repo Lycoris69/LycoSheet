@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.lycoris.lycosheet.android.audio.AudioRecorderHelper
+import com.lycoris.lycosheet.android.ui.components.IpaLookupField
 import com.lycoris.lycosheet.android.ui.components.PronunciationRecorder
 import com.lycoris.lycosheet.audio.AudioPlayer
 import com.lycoris.lycosheet.data.model.CardType
@@ -38,6 +39,12 @@ fun HomeScreen(viewModel: HomeViewModel = koinViewModel()) {
         if (state.cardSaved) {
             snackbarHostState.showSnackbar("Card saved!")
             viewModel.onCardSavedConsumed()
+        }
+    }
+    LaunchedEffect(state.ipaLookupError) {
+        state.ipaLookupError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onIpaErrorConsumed()
         }
     }
 
@@ -176,6 +183,16 @@ private fun ClassicCardForm(state: HomeState, viewModel: HomeViewModel) {
         modifier = Modifier.fillMaxWidth().height(130.dp),
         maxLines = 5
     )
+    IpaLookupField(
+        lookupWord = state.frontText.trim(),
+        phoneticText = state.phoneticText,
+        onPhoneticChanged = viewModel::onPhoneticTextChanged,
+        onPronunciationDownloaded = viewModel::onPronunciationPathChanged,
+        isLooking = state.isLookingUpIpa,
+        onLookupStarted = viewModel::onIpaLookupStarted,
+        onLookupFinished = { ipa, audio, err -> viewModel.onIpaLookupFinished(ipa, audio, err) },
+        modifier = Modifier.fillMaxWidth()
+    )
     PronunciationRecorder(
         pronunciationPath = state.pronunciationPath,
         onPathChanged = viewModel::onPronunciationPathChanged,
@@ -227,6 +244,17 @@ private fun MultipleChoiceCardForm(state: HomeState, viewModel: HomeViewModel) {
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
     )
+    // Look up the correct answer word for MC
+    IpaLookupField(
+        lookupWord = state.backText.trim(),
+        phoneticText = state.phoneticText,
+        onPhoneticChanged = viewModel::onPhoneticTextChanged,
+        onPronunciationDownloaded = viewModel::onPronunciationPathChanged,
+        isLooking = state.isLookingUpIpa,
+        onLookupStarted = viewModel::onIpaLookupStarted,
+        onLookupFinished = { ipa, audio, err -> viewModel.onIpaLookupFinished(ipa, audio, err) },
+        modifier = Modifier.fillMaxWidth()
+    )
     PronunciationRecorder(
         pronunciationPath = state.pronunciationPath,
         onPathChanged = viewModel::onPronunciationPathChanged,
@@ -252,6 +280,17 @@ private fun FillInCardForm(state: HomeState, viewModel: HomeViewModel) {
         placeholder = { Text("Paris") },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
+    )
+    // Fill-in: look up the answer word (the blank to fill)
+    IpaLookupField(
+        lookupWord = state.backText.trim(),
+        phoneticText = state.phoneticText,
+        onPhoneticChanged = viewModel::onPhoneticTextChanged,
+        onPronunciationDownloaded = viewModel::onPronunciationPathChanged,
+        isLooking = state.isLookingUpIpa,
+        onLookupStarted = viewModel::onIpaLookupStarted,
+        onLookupFinished = { ipa, audio, err -> viewModel.onIpaLookupFinished(ipa, audio, err) },
+        modifier = Modifier.fillMaxWidth()
     )
     PronunciationRecorder(
         pronunciationPath = state.pronunciationPath,
@@ -422,11 +461,5 @@ private fun ListeningCardForm(state: HomeState, viewModel: HomeViewModel) {
         placeholder = { Text("What the audio says") },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
-    )
-    // Pronunciation clip is separate from the main audio (which is extraData for LISTENING)
-    PronunciationRecorder(
-        pronunciationPath = state.pronunciationPath,
-        onPathChanged = viewModel::onPronunciationPathChanged,
-        modifier = Modifier.fillMaxWidth()
     )
 }

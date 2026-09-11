@@ -181,7 +181,13 @@ private fun ClassicCard(
                     }
                 }
             } else {
-                GradeRow(onGrade = { viewModel.gradeCard(it) })
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IpaChip(card.phoneticText)
+                    GradeRow(onGrade = { viewModel.gradeCard(it) })
+                }
             }
         }
     }
@@ -261,6 +267,7 @@ private fun MultipleChoiceCard(card: Card, onGrade: (CardGrade) -> Unit) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
+                IpaChip(card.phoneticText)
                 GradeRow(onGrade = onGrade)
             }
         }
@@ -339,6 +346,7 @@ private fun FillInCard(card: Card, onGrade: (CardGrade) -> Unit) {
                     }
                 }
             }
+            IpaChip(card.phoneticText)
             GradeRow(onGrade = onGrade)
         }
     }
@@ -534,6 +542,25 @@ private fun SeenBadge(count: Int, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    }
+}
+
+/** Displays IPA phonetic text as a small tonal chip. Hidden when [ipa] is blank. */
+@Composable
+private fun IpaChip(ipa: String, modifier: Modifier = Modifier) {
+    if (ipa.isBlank()) return
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        tonalElevation = 1.dp
+    ) {
+        Text(
+            text = ipa,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onTertiaryContainer
         )
     }
 }

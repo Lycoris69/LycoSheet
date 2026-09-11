@@ -33,15 +33,24 @@ class CardRepositoryImpl(private val db: LycoSheetDatabase) : CardRepository {
         back: String,
         cardType: CardType,
         extraData: String,
-        pronunciationPath: String
+        pronunciationPath: String,
+        phoneticText: String
     ): Long = withContext(Dispatchers.Default) {
-        queries.insert(deckId, front, back, cardType.name, extraData, pronunciationPath, currentTimeMillis())
+        queries.insert(deckId, front, back, cardType.name, extraData, pronunciationPath, phoneticText, currentTimeMillis())
         queries.lastInsertRowId().executeAsOne()
     }
 
     override suspend fun updateCard(card: Card) =
         withContext(Dispatchers.Default) {
-            queries.update(card.front, card.back, card.cardType.name, card.extraData, card.pronunciationPath, card.id)
+            queries.update(
+                front = card.front,
+                back = card.back,
+                card_type = card.cardType.name,
+                extra_data = card.extraData,
+                pronunciation_path = card.pronunciationPath,
+                phonetic_text = card.phoneticText,
+                id = card.id
+            )
         }
 
     override suspend fun deleteCard(id: Long) =
@@ -67,6 +76,7 @@ class CardRepositoryImpl(private val db: LycoSheetDatabase) : CardRepository {
         cardType = runCatching { CardType.valueOf(card_type) }.getOrDefault(CardType.CLASSIC),
         extraData = extra_data,
         pronunciationPath = pronunciation_path,
+        phoneticText = phonetic_text,
         createdAt = created_at,
         seenCount = seen_count.toInt()
     )

@@ -10,6 +10,8 @@ data class Card(
     val extraData: String = "",
     /** Absolute path to an optional pronunciation audio clip (.m4a). Available on all card types. */
     val pronunciationPath: String = "",
+    /** IPA phonetic transcription string, e.g. "/ˈwɔːtər/". Empty when not set. */
+    val phoneticText: String = "",
     val createdAt: Long = 0L,
     val seenCount: Int = 0
 )

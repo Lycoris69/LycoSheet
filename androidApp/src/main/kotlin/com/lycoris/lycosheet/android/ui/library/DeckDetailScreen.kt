@@ -497,12 +497,15 @@ private fun EditCardDialog(
                     }
                 }
 
-                // Pronunciation recorder — shown on all types
-                PronunciationRecorder(
-                    pronunciationPath = pronunciationPath,
-                    onPathChanged = { pronunciationPath = it },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Pronunciation recorder — not applicable to Listening cards
+                // (the main audio already serves that role)
+                if (currentType != CardType.LISTENING) {
+                    PronunciationRecorder(
+                        pronunciationPath = pronunciationPath,
+                        onPathChanged = { pronunciationPath = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         },
         confirmButton = {

@@ -13,8 +13,13 @@ data class HomeState(
     val wrongChoice3: String = "",
     // Absolute file path for LISTENING cards; persists across type switches
     val audioPath: String = "",
-    // Optional pronunciation clip available on ALL card types
+    // Optional pronunciation clip available on all non-Listening card types
     val pronunciationPath: String = "",
+    // IPA phonetic string, e.g. "/ˈwɔːtər/" — auto-filled by IPA lookup
+    val phoneticText: String = "",
+    // IPA lookup state
+    val isLookingUpIpa: Boolean = false,
+    val ipaLookupError: String? = null,
     val deckName: String = "",
     val selectedDeckId: Long? = null,
     val availableDecks: List<Deck> = emptyList(),

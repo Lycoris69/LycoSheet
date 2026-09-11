@@ -39,6 +39,18 @@ class HomeViewModel(
     fun onWrongChoice3Changed(text: String) = _state.update { it.copy(wrongChoice3 = text) }
     fun onAudioPathChanged(path: String) = _state.update { it.copy(audioPath = path) }
     fun onPronunciationPathChanged(path: String) = _state.update { it.copy(pronunciationPath = path) }
+    fun onPhoneticTextChanged(text: String) = _state.update { it.copy(phoneticText = text, ipaLookupError = null) }
+    fun onIpaLookupStarted() = _state.update { it.copy(isLookingUpIpa = true, ipaLookupError = null) }
+    fun onIpaLookupFinished(ipa: String?, pronunciationPath: String?, error: String?) =
+        _state.update {
+            it.copy(
+                isLookingUpIpa = false,
+                phoneticText = ipa ?: it.phoneticText,
+                pronunciationPath = pronunciationPath ?: it.pronunciationPath,
+                ipaLookupError = error
+            )
+        }
+    fun onIpaErrorConsumed() = _state.update { it.copy(ipaLookupError = null) }
 
     fun saveCard() {
         val s = _state.value
@@ -64,7 +76,7 @@ class HomeViewModel(
                     CardType.LISTENING -> s.frontText.trim() to s.audioPath // front = optional hint
                     else -> s.frontText.trim() to ""
                 }
-                createCard(deckId, front, s.backText.trim(), s.cardType, extraData, s.pronunciationPath)
+                createCard(deckId, front, s.backText.trim(), s.cardType, extraData, s.pronunciationPath, s.phoneticText)
                 _state.update {
                     it.copy(
                         frontText = "",
@@ -74,6 +86,7 @@ class HomeViewModel(
                         wrongChoice3 = "",
                         audioPath = "",
                         pronunciationPath = "",
+                        phoneticText = "",
                         isLoading = false,
                         cardSaved = true
                         // cardType kept so user can batch-create

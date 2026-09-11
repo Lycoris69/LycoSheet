@@ -13,7 +13,8 @@ interface CardRepository {
         back: String,
         cardType: CardType = CardType.CLASSIC,
         extraData: String = "",
-        pronunciationPath: String = ""
+        pronunciationPath: String = "",
+        phoneticText: String = ""
     ): Long
     suspend fun updateCard(card: Card)
     suspend fun deleteCard(id: Long)

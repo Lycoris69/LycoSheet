@@ -10,6 +10,7 @@ class CreateCardUseCase(private val repository: CardRepository) {
         back: String,
         cardType: CardType = CardType.CLASSIC,
         extraData: String = "",
-        pronunciationPath: String = ""
-    ): Long = repository.createCard(deckId, front, back, cardType, extraData, pronunciationPath)
+        pronunciationPath: String = "",
+        phoneticText: String = ""
+    ): Long = repository.createCard(deckId, front, back, cardType, extraData, pronunciationPath, phoneticText)
 }
