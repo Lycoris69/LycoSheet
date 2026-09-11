@@ -399,6 +399,7 @@ private fun EditCardDialog(
     // Phonetic text — editable, shared across all non-Listening types
     var phoneticText by remember(card.id) { mutableStateOf(card.phoneticText) }
     var isLookingUpIpa by remember(card.id) { mutableStateOf(false) }
+    var ipaError by remember(card.id) { mutableStateOf<String?>(null) }
 
     val saveEnabled = when (currentType) {
         CardType.CLASSIC -> classicFront.isNotBlank() && classicBack.isNotBlank()
@@ -534,13 +535,22 @@ private fun EditCardDialog(
                             if (pronunciationPath.isBlank()) pronunciationPath = path
                         },
                         isLooking = isLookingUpIpa,
-                        onLookupStarted = { isLookingUpIpa = true },
-                        onLookupFinished = { ipa, _, _ ->
+                        onLookupStarted = { isLookingUpIpa = true; ipaError = null },
+                        onLookupFinished = { ipa, _, error ->
                             isLookingUpIpa = false
                             if (ipa != null) phoneticText = ipa
+                            ipaError = error
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    ipaError?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
                     PronunciationRecorder(
                         pronunciationPath = pronunciationPath,
                         onPathChanged = { pronunciationPath = it },

@@ -37,22 +37,32 @@ class IpaLookupService(
 ) {
     /**
      * Look up [word] and return an [IpaResult], or null if nothing was found.
+     *
+     * [languageCode] — ISO code of the offline library to search (e.g. "en_US", "fr_FR").
+     *   - If non-null, that library is searched first (instant when downloaded).
+     *   - Online Free Dictionary API is only tried when [languageCode] is null or starts with "en".
+     *   - If null, falls back to en_US → en_UK offline then online.
+     *
      * Never throws; all errors are swallowed and return null.
      */
-    suspend fun lookup(word: String): IpaResult? {
+    suspend fun lookup(word: String, languageCode: String? = null): IpaResult? {
         val clean = word.trim().lowercase()
         if (clean.isBlank()) return null
 
-        // 1. Offline library — try en_US first, then en_UK as fallback
-        val offlineIpa = library.lookup(clean, "en_US")
-            ?: library.lookup(clean, "en_UK")
+        // 1. Offline library
+        val offlineIpa: String? = if (languageCode != null) {
+            library.lookup(clean, languageCode)
+        } else {
+            // No specific language — default to en_US → en_UK
+            library.lookup(clean, "en_US") ?: library.lookup(clean, "en_UK")
+        }
 
-        // 2. Online — always try when connected (gives us audio too)
-        val online = runCatching { fetchOnline(clean) }.getOrNull()
+        // 2. Online (English only — Free Dictionary API doesn't support other languages)
+        val isEnglish = languageCode == null || languageCode.startsWith("en")
+        val online = if (isEnglish) runCatching { fetchOnline(clean) }.getOrNull() else null
 
         return when {
             online != null -> {
-                // Prefer online IPA (richer), but fall back to offline when blank
                 val ipa = online.ipa.ifBlank { offlineIpa } ?: return null
                 IpaResult(ipa, online.localAudioPath)
             }

@@ -10,24 +10,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import com.lycoris.lycosheet.android.util.ALL_IPA_LANGUAGES
+import com.lycoris.lycosheet.android.util.IpaLanguage
+import com.lycoris.lycosheet.android.util.IpaLibraryManager
 import com.lycoris.lycosheet.android.util.IpaLookupService
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * An IPA phonetics row shown below card creation forms.
+ * IPA phonetics field with:
+ *  - Editable text field for the IPA transcription
+ *  - Language picker (dropdown) showing all downloaded offline libraries
+ *  - 🔍 search button that calls [IpaLookupService] using the selected language
+ *  - Spinner while the lookup is running
+ *  - Animated preview of the IPA below the field
  *
- * Shows:
- *  - Current IPA text (editable) or placeholder when empty
- *  - A 🔍 button that calls [IpaLookupService.lookup] for [lookupWord]
- *  - A spinner while the lookup is running
- *  - An error snack via [onError] on failure
- *
- * [lookupWord]         — the word to look up (front text / correct answer)
- * [phoneticText]       — current IPA value from state
- * [onPhoneticChanged]  — called when IPA text changes (typed or auto-filled)
- * [onPronunciationDownloaded] — called with local audio path when the API returns one
- * [isLooking]          — true while an in-progress lookup is running (from ViewModel state)
+ * If no library is downloaded the picker is hidden and the search goes online
+ * (English only, via Free Dictionary API).
  */
 @Composable
 fun IpaLookupField(
@@ -41,9 +40,78 @@ fun IpaLookupField(
     modifier: Modifier = Modifier
 ) {
     val service: IpaLookupService = koinInject()
+    val library: IpaLibraryManager = koinInject()
     val scope = rememberCoroutineScope()
 
+    // Build the list of downloaded languages (shown in the picker)
+    val downloadedLanguages: List<IpaLanguage> = remember {
+        val codes = library.downloadedCodes()
+        ALL_IPA_LANGUAGES.filter { it.code in codes }
+    }
+
+    // Selected language — default to en_US if downloaded, else first downloaded, else null
+    var selectedLang by remember {
+        mutableStateOf(
+            downloadedLanguages.firstOrNull { it.code == "en_US" }
+                ?: downloadedLanguages.firstOrNull()
+        )
+    }
+    var langMenuExpanded by remember { mutableStateOf(false) }
+
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
+        // ── Language picker row (only when at least one library is downloaded) ──
+        if (downloadedLanguages.isNotEmpty()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    "Search in:",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Box {
+                    AssistChip(
+                        onClick = { langMenuExpanded = true },
+                        label = {
+                            Text(
+                                if (selectedLang != null)
+                                    "${selectedLang!!.flag}  ${selectedLang!!.displayName}"
+                                else
+                                    "🌐  Online (EN)",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        modifier = Modifier.height(28.dp)
+                    )
+                    DropdownMenu(
+                        expanded = langMenuExpanded,
+                        onDismissRequest = { langMenuExpanded = false }
+                    ) {
+                        downloadedLanguages.forEach { lang ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "${lang.flag}  ${lang.displayName}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                },
+                                onClick = {
+                                    selectedLang = lang
+                                    langMenuExpanded = false
+                                },
+                                trailingIcon = if (lang == selectedLang) {
+                                    { Text("✓", color = MaterialTheme.colorScheme.primary) }
+                                } else null
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── IPA text field + search button ─────────────────────────────────────
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -57,23 +125,29 @@ fun IpaLookupField(
                 singleLine = true,
                 trailingIcon = {
                     if (isLooking) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
                     }
                 }
             )
 
-            // Look-up button
             FilledTonalIconButton(
                 onClick = {
                     if (!isLooking && lookupWord.isNotBlank()) {
                         onLookupStarted()
                         scope.launch {
-                            val result = service.lookup(lookupWord)
+                            val result = service.lookup(lookupWord, selectedLang?.code)
                             if (result != null) {
                                 result.localAudioPath?.let { onPronunciationDownloaded(it) }
                                 onLookupFinished(result.ipa, result.localAudioPath, null)
                             } else {
-                                onLookupFinished(null, null, "No phonetics found for \"$lookupWord\"")
+                                val langName = selectedLang?.displayName ?: "English (online)"
+                                onLookupFinished(
+                                    null, null,
+                                    "\"$lookupWord\" not found in $langName"
+                                )
                             }
                         }
                     }
@@ -84,6 +158,7 @@ fun IpaLookupField(
             }
         }
 
+        // ── IPA preview ─────────────────────────────────────────────────────────
         AnimatedVisibility(visible = phoneticText.isNotBlank()) {
             Text(
                 phoneticText,
