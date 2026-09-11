@@ -1,6 +1,8 @@
 package com.lycoris.lycosheet.android.ui.library
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -396,7 +398,12 @@ private fun EditCardDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit card") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .imePadding()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 // Type selector
                 val types = listOf(
                     CardType.CLASSIC to "Classic",
